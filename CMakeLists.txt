@@ -1,15 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(future_pose_predictor)
+project(vehicle_tracker_prediction_skeleton)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
+add_compile_options(-g)
+# SET(CMAKE_C_FLAGS "${CMAKE_GCC_FLAGS} -lstdc++fs")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
   rospy
   std_msgs
+  apriltags2_ros
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -46,11 +51,13 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
+#  add_message_files(
 #   FILES
 #   Message1.msg
 #   Message2.msg
-# )
+# 	AprilTagDetectionArray.msg
+
+#  )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -67,10 +74,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
+#  generate_messages(
 #   DEPENDENCIES
-#   std_msgs
-# )
+#    std_msgs
+
+#  )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -104,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES future_pose_predictor
-#  CATKIN_DEPENDS rospy std_msgs
+   CATKIN_DEPENDS rospy roscpp std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -127,12 +135,18 @@ include_directories(
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/future_pose_predictor_node.cpp)
+add_executable(vehicle_tracker_node src/vehicle_tracker.cpp)
+target_link_libraries(vehicle_tracker_node ${catkin_LIBRARIES} )
+add_dependencies(vehicle_tracker_node ${catkin_EXPORTED_TARGETS})
+
+add_executable(dummy_info_node src/dummy_service.cpp)
+target_link_libraries(dummy_info_node ${catkin_LIBRARIES} )
+add_dependencies(dummy_info_node ${catkin_EXPORTED_TARGETS})
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

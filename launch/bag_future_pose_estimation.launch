@@ -9,7 +9,7 @@
         args="0.285 0.0 0.127 0.0 0.0 0.0 1.0 /base_link /laser" />
 
   <!-- Run map server -->
-  <arg name="map_file" default="$(find future_pose_predictor)/maps/levine.yaml"/>
+  <arg name="map_file" default="$(find vehicle_tracker_prediction_skeleton)/maps/levine.yaml"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 
   <!-- ARGUMENTS -->
@@ -20,17 +20,17 @@
   <arg name="image_topic" default="image_raw" />
 
   <!-- LAUNCHES RVIZ -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find future_pose_predictor)/config/rviz_custom.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find vehicle_tracker_prediction_skeleton)/config/rviz_custom.rviz" />
 
-  <node pkg="rosbag" type="play" name="player" args="--clock -d 5 /home/nvidia/Desktop/two-cars-levine-loop-bad-lots-of-stops.bag"/>
+  <!--node pkg="rosbag" type="play" name="player" args=" clock -d 5 $(find vehicle_tracker)/bag/matt-driving-two-cars-2.bag"/-->
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="laser_to_camera" args="0 0 0 -1.570796 0 -1.570796 laser camera " />
   <node pkg="tf2_ros" type="static_transform_publisher" name="id_0_to_other_base_link" args="0 0 0 1.570796 1.570796 0 id_0 other_base_link " />
 
   <!-- LAUNCHES APRILTAGS2 -->
   <!-- Set parameters -->
-  <rosparam command="load" file="$(find future_pose_predictor)/config/settings.yaml" ns="$(arg node_namespace)" />
-  <rosparam command="load" file="$(find future_pose_predictor)/config/tags.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find vehicle_tracker_prediction_skeleton)/config/settings.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find vehicle_tracker_prediction_skeleton)/config/tags.yaml" ns="$(arg node_namespace)" />
   
   <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
     <!-- Remap topics from those used in code to those on the ROS network -->
@@ -108,12 +108,5 @@
 		-->
 		<param name="rangelib_variant" value="2"/>
 	</node>
-
-  <!-- Lastly, will also want to run Python files for my own written nodes. -->
-  <node pkg="future_pose_predictor" name="future_pose_estimator_node" type="future_pose_estimator.py" output="screen" />
-<!--  <node pkg="apriltags2_ros" name="predicted_poses_saver" type="predicted_poses_saver.py" output="screen"/>-->
-  <node pkg="future_pose_predictor" name="visualize_markers_node" type="visualize_markers.py" output="screen"/>
-  <node pkg="future_pose_predictor" name="visualize_predicted_poses_node" type="visualize_predicted_poses.py" output="screen"/>
-  <node pkg="future_pose_predictor" name="visualize_actual_poses_node" type="visualize_actual_poses.py" output="screen"/>
 
 </launch>
