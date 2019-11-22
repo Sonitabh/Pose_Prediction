@@ -34,8 +34,9 @@ Pose_Estimator::Pose_Estimator(ros::NodeHandle& nh) : tf2_listener_(tf_buffer_)
 	pub_markers = nh.advertise<visualization_msgs::MarkerArray>("/future_pose",1000);
 
 	std::string CSV_path;
-    CSVReader reader(CSV_path);
-    waypoints = reader.getData();
+	nh_.getParam("CSV_path", CSV_path);
+    	CSVReader reader(CSV_path);
+    	waypoints = reader.getData();
 }
 
 std::array<double, 2> get_best_track_point_index(const std::vector<std::array<double, 2>>& way_point_data, double lookahead_distance)
