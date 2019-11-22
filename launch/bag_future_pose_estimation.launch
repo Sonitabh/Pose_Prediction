@@ -9,8 +9,8 @@
         args="0.285 0.0 0.127 0.0 0.0 0.0 1.0 /base_link /laser" />
 
   <!-- Run map server -->
-  <arg name="map_file" default="$(find vehicle_tracker_prediction_skeleton)/maps/levine.yaml"/>
-  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
+<!--  <arg name="map_file" default="$(find vehicle_tracker_prediction_skeleton)/maps/levine.yaml"/>-->
+<!--  <node name="map_server" pk/home/yash/yasht_ws/srcg="map_server" type="map_server" args="$(arg map_file)" />-->
 
   <!-- ARGUMENTS -->
   <arg name="launch_prefix" default="" />
@@ -29,8 +29,8 @@
 
   <!-- LAUNCHES APRILTAGS2 -->
   <!-- Set parameters -->
-  <rosparam command="load" file="$(find vehicle_tracker_prediction_skeleton)/config/settings.yaml" ns="$(arg node_namespace)" />
-  <rosparam command="load" file="$(find vehicle_tracker_prediction_skeleton)/config/tags.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find Pose_Prediction)/config/settings.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find Pose_Prediction)/config/tags.yaml" ns="$(arg node_namespace)" />
   
   <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
     <!-- Remap topics from those used in code to those on the ROS network -->
