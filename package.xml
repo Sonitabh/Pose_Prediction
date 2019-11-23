@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>Pose_Prediction</name>
+  <name>av_pose_prediction</name>
   <version>0.0.0</version>
   <description>The vehicle_tracker_prediction_skeleton package</description>
 

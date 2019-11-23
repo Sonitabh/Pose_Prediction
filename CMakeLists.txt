@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(Pose_Prediction)
+project(av_pose_prediction)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  tf2_ros
   apriltags2_ros
   message_generation
 )
@@ -147,6 +148,8 @@ add_executable(dummy_info_node src/dummy_service.cpp)
 target_link_libraries(dummy_info_node ${catkin_LIBRARIES} )
 add_dependencies(dummy_info_node ${catkin_EXPORTED_TARGETS})
 
+add_executable(tf2_map_to_laser_broadcaster src/tf2_map_to_laser_broadcaster.cpp)
+target_link_libraries(tf2_map_to_laser_broadcaster ${catkin_LIBRARIES} )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

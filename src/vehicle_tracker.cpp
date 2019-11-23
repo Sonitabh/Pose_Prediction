@@ -6,49 +6,37 @@
 #include <math.h>
 #include "ros/ros.h"
 #include "vehicle_tracker.h"
-#include <tf/transform_listener.h>
-#include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
 #include <tf/tf.h>
 #include <vector>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <visualization_msgs/Marker.h>
-#include <fstream>
-#include <iterator>
 #include <string>
-#include <algorithm>
-#include <boost/algorithm/string.hpp>
-// #include <experimental/filesystem>
-// #include "apriltag_ros/AprilTagDetectionArray.h"
-
-//#include <tf/transformations/euler_from_quaternion.h>
-
 #include "csv_reader.h"
-
 
 Pose_Estimator::Pose_Estimator(ros::NodeHandle& nh) : tf2_listener_(tf_buffer_)
 {
-	sub_detections = nh.subscribe("/tag_detection",10,&Pose_Estimator::FuturePoseCallback,this);
+    ROS_INFO("Pose Estimator Initializing");
+	sub_detections = nh.subscribe("/tag_detections",10,&Pose_Estimator::FuturePoseCallback,this);
 	pub_markers = nh.advertise<visualization_msgs::MarkerArray>("/future_pose",1000);
-
-	std::string CSV_path;
+    std::string CSV_path = "/home/yash/yasht_ws/src/av_pose_prediction/waypoints/levine-waypoints.csv";
     CSVReader reader(CSV_path);
     waypoints = reader.getData();
+    ROS_INFO("Class Initialized");
 }
 
-std::array<double, 2> get_best_track_point_index(const std::vector<std::array<double, 2>>& way_point_data, double lookahead_distance)
+std::array<double, 2> Pose_Estimator::get_best_track_point_index(const std::vector<std::array<double, 2>>& way_point_data, double lookahead_distance)
 {
-    double closest_distance = std::numeric_limits<double>::max();
+    float closest_distance = std::numeric_limits<float>::max();
     const size_t way_point_size = way_point_data.size();
     int best_index = -1;
 
     for(size_t i=0; i <way_point_data.size(); ++i)
     {
         if(way_point_data[i][0] < 0) continue;
-        double distance = sqrt(pow(way_point_data[i][0], 2)+ pow( way_point_data[i][1], 2));
-        double lookahead_diff = std::abs(distance - lookahead_distance);
+        float distance = sqrt(pow(way_point_data[i][0], 2)+ pow( way_point_data[i][1], 2));
+        float lookahead_diff = std::abs(distance - lookahead_distance);
         if(lookahead_diff < closest_distance)
         {
             closest_distance = lookahead_diff;
@@ -63,7 +51,7 @@ float Pose_Estimator::PurePursuitAngle(float x, float y, float theta)
 	std::vector<std::array<double, 2>> transformed_Waypoints;
     try
     {
-        tf_map_to_laser_ = tf_buffer_.lookupTransform("laser", "map", ros::Time(0));
+        tf_map_to_other_base_link_ = tf_buffer_.lookupTransform("other_base_link", "map", ros::Time(0));
     }
     catch (tf::TransformException& ex)
     {
@@ -82,13 +70,10 @@ float Pose_Estimator::PurePursuitAngle(float x, float y, float theta)
         transformed_waypoint.orientation.z = 0;
         transformed_waypoint.orientation.w = 1;
 
-        tf2::doTransform(transformed_waypoint, transformed_waypoint, tf_map_to_laser_);
-        float x1 = (transformed_waypoint.position.x - x) * cos(theta) + (transformed_waypoint.position.y - y) * sin(theta);
-        float y1 = (x - transformed_waypoint.position.x) * sin(theta) - (y - transformed_waypoint.position.y) * cos(theta);
-        std::array<double, 2> xy_detected_car_frame{x1, y1};
+        tf2::doTransform(transformed_waypoint, transformed_waypoint, tf_map_to_other_base_link_);
+        std::array<double, 2> xy_detected_car_frame{transformed_waypoint.position.x, transformed_waypoint.position.y};
         transformed_Waypoints.emplace_back(xy_detected_car_frame);
     }
-
 
 	const auto goalpoint = get_best_track_point_index(transformed_Waypoints, 1.5);
 
@@ -101,83 +86,101 @@ float Pose_Estimator::PurePursuitAngle(float x, float y, float theta)
 
 void Pose_Estimator::FuturePoseCallback(apriltags2_ros::AprilTagDetectionArray data)
 {
-    double alpha = 0.05;
-    if(!last_x || !last_y)
+    if(data.detections.empty())
     {
-        last_x = data.detections[0].pose.pose.pose.position.x;
-        last_y = data.detections[0].pose.pose.pose.position.y;
-        last_time = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
         return;
     }
-    float x_car = data.detections[0].pose.pose.pose.position.x;
-    float y_car = data.detections[0].pose.pose.pose.position.y;
-    const auto quaternion = data.detections[0].pose.pose.pose.orientation;
-    const auto theta_car = tf::getYaw(quaternion);
+    ROS_INFO("Inside Future Pose Callback");
+    float alpha = 0.05;
+    if(!last_x_ego_car || !last_y_ego_car)
+    {
+        last_x_ego_car = data.detections[0].pose.pose.pose.position.x;
+        last_y_ego_car = data.detections[0].pose.pose.pose.position.y;
+        return;
+    }
 
-    size_t current_time = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()).time_since_epoch().count();
-    size_t dt = current_time - last_time;
+    float x_ego_car = data.detections[0].pose.pose.pose.position.x;
+    float y_ego_car = data.detections[0].pose.pose.pose.position.y;
+    const auto theta_ego_car = tf::getYaw(data.detections[0].pose.pose.pose.orientation);
 
     std::vector<float> x_poses_ego_vehicle;
     std::vector<float> y_poses_ego_vehicle;
 
-    x_poses_ego_vehicle.push_back(x_car);
-    y_poses_ego_vehicle.push_back(y_car);
+    x_poses_ego_vehicle.push_back(x_ego_car);
+    y_poses_ego_vehicle.push_back(y_ego_car);
 
-    float next_x = x_car;
-    float next_y = y_car;
-    float steering_angle;
+    float next_x = x_ego_car;
+    float next_y = y_ego_car;
+    float steering_angle = theta_ego_car;
+    ROS_INFO("Predicting Pose");
+
+    std::chrono::steady_clock::time_point current_time = std::chrono::steady_clock::now();
+    std::chrono::steady_clock::time_point last_time = std::chrono::steady_clock::now();
+
     for(int i=0; i < 10; i++)
     {
-        const double pp_angle = PurePursuitAngle(next_x, next_y, theta_car);
+        size_t dt = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_time).count();
+        last_time = current_time;
+        current_time = std::chrono::steady_clock::now();
+
+        std::cout << "dt: " << dt << " milliseconds" <<std::endl;
+        const float pp_angle = PurePursuitAngle(next_x, next_y, steering_angle);
         x_poses_ego_vehicle.push_back(next_x);
         y_poses_ego_vehicle.push_back(next_y);
-        steering_angle = pow(alpha, i)*(theta_car) + (1-pow(alpha, 2))*pp_angle;
-        float vx_car = next_x - last_x;
-        float vy_car = next_y - last_y;
-        float next_x = x_car + dt*0.001*vx_car;
-        float next_y = y_car + dt*0.001*vy_car;
-        last_x = x_car;
-        last_y = y_car;
+        steering_angle = pow(alpha, i)*(theta_ego_car) + (1 - pow(alpha, 2)) * pp_angle;
+        float vx_car = next_x - last_x_ego_car;
+        float vy_car = next_y - last_y_ego_car;
+
+        next_x = x_ego_car + dt * 0.001 * vx_car;
+        next_y = y_ego_car + dt * 0.001 * vy_car;
+        last_x_ego_car = x_ego_car;
+        last_y_ego_car = y_ego_car;
     }
-
+    ROS_INFO("Calling PublishMarkers");
     PublishMarkers(x_poses_ego_vehicle, y_poses_ego_vehicle);
-
-
-
-
-//reciever information of poses from the april tag 
-// you might want to call the publish markers function here to publish the predicted poses. 
-
 }
 
 void Pose_Estimator::PublishMarkers(const std::vector<float>& x_poses_ego_vehicle,
-                                    const std::vector<float> y_poses_ego_vehicle){
+                                    const std::vector<float>& y_poses_ego_vehicle)
+{
+    ROS_INFO("Publishing Markers");
+    visualization_msgs::MarkerArray viz_msg;
 
-	// perform calculations and predictions by the linear and pure pursuit model. put them in a visualization message and then
-
-
-	visualization_msgs::MarkerArray viz_msg;
-
-	pub_markers.publish(viz_msg);
-
-	// publish markers of positions from the predictions
+    for(size_t i=0; i<x_poses_ego_vehicle.size(); i++)
+    {
+        std::cout << "i: " << i << std::endl;
+        visualization_msgs::Marker point;
+        point.header.frame_id = "/laser";
+        point.header.stamp = ros::Time::now();
+        point.ns = "point";
+        point.action =visualization_msgs::Marker::ADD;
+        point.pose.orientation.w = 1.0;
+        point.id = i;
+        point.type = visualization_msgs::Marker::SPHERE;
+        point.scale.x = 0.2;
+        point.scale.y = 0.2;
+        point.scale.z = 0.2;
+        point.color.r = 1.0f;
+        point.color.a = 1.0;
+        point.pose.position.x = x_poses_ego_vehicle[i];
+        point.pose.position.y = y_poses_ego_vehicle[i];
+        point.lifetime = ros::Duration(10);
+        viz_msg.markers.push_back(std::move(point));
+    }
+    pub_markers.publish(viz_msg);
+    ROS_INFO("Published Markers");
 }
 
 
 int main(int argc, char* argv[]){
 
 
-	ros::init(argc,argv,"planner_node");
+	ros::init(argc,argv,"planner_nodes");
 
 	ros::NodeHandle nh;
 
 	Pose_Estimator est_obj(nh);
 
-	ros::Rate loop_rate(10);
-	while(ros::ok()){
+    ros::spin();
 
-		ros::spinOnce();
-		// est_obj.PublishMarkers();
-		loop_rate.sleep();
-	}
 }
