@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "map_to_laser_broadcaster");
     ros::NodeHandle node;
-    ros::Subscriber sub = node.subscribe("pf/pose/odom", 10, &poseCallback);
+    ros::Subscriber sub = node.subscribe("pf/pose/odom", 4, &poseCallback);
     ros::spin();
     return 0;
 };
