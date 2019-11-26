@@ -12,7 +12,7 @@
   <!-- <include file="$(find racecar)/launch/teleop.launch"/> -->
 
   <!-- LAUNCHES RVIZ -->
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find Pose_Prediction)/config/rviz_custom.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find av_pose_prediction)/config/rviz_custom.rviz" />
 
   <!-- STATIC CAMERA TRANSFORM -->
   <node pkg="tf" type="static_transform_publisher" name="usb_cam_tf" args="0 0 0 3.141593 -3.141593 -1.570796 camera map 100" />
@@ -32,8 +32,8 @@
 
   <!-- LAUNCHES APRILTAGS2 -->
   <!-- Set parameters -->
-  <rosparam command="load" file="$(find Pose_Prediction)/config/settings.yaml" ns="$(arg node_namespace)" />
-  <rosparam command="load" file="$(find Pose_Prediction)/config/tags.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find av_pose_prediction)/config/settings.yaml" ns="$(arg node_namespace)" />
+  <rosparam command="load" file="$(find av_pose_prediction)/config/tags.yaml" ns="$(arg node_namespace)" />
   
   <node pkg="apriltags2_ros" type="apriltags2_ros_continuous_node" name="$(arg node_namespace)" clear_params="true" output="screen" launch-prefix="$(arg launch_prefix)" >
     <!-- Remap topics from those used in code to those on the ROS network -->
@@ -45,5 +45,5 @@
     <param name="publish_tf" type="bool" value="true" />
   </node>
 
-  <node pkg="Pose_Prediction" name="quaternion_to_yaw_node" type="quaternion_to_yaw.py" output="screen"/>
+  <node pkg="av_pose_prediction" name="quaternion_to_yaw_node" type="quaternion_to_yaw.py" output="screen"/>
 </launch>

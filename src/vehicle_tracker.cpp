@@ -73,6 +73,7 @@ float Pose_Estimator::PurePursuitAngle(float x, float y, float theta)
 
         tf2::doTransform(transformed_waypoint, transformed_waypoint, tf_map_to_other_base_link_);
 
+        // checkpoint
         const auto x_d = transformed_waypoint.position.x*cos(theta) - transformed_waypoint.position.y*sin(theta) + x;
         const auto y_d = transformed_waypoint.position.x*sin(theta) + transformed_waypoint.position.y*cos(theta) + y;
 
@@ -97,6 +98,7 @@ void Pose_Estimator::FuturePoseCallback(apriltags2_ros::AprilTagDetectionArray d
 
     if(data.detections.empty())
     {
+        //  Do something
         return;
     }
     ROS_INFO("Inside Future Pose Callback");
@@ -145,8 +147,8 @@ void Pose_Estimator::FuturePoseCallback(apriltags2_ros::AprilTagDetectionArray d
         {
             v = sqrt(pow(next_x - last_x_ego_car, 2)+pow(next_y - last_y_ego_car, 2));
         }
-        next_x = next_x +  v * cos(steering_angle);
-        next_y = next_y +  v * sin(steering_angle);
+        next_x = next_x +  v * cos(steering_angle); // checkpoint
+        next_y = next_y +  v * sin(steering_angle); // checkpoint
         last_x_ego_car = x_ego_car;
         last_y_ego_car = y_ego_car;
         last_time = current_time;
